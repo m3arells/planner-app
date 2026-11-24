@@ -1,0 +1,219 @@
+
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b0e14">
+<title>Planner</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0b0e14;color:#f1f3f8;font-family:Arial,sans-serif;padding:22px 16px 90px}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px}
+.logo{font-size:25px;font-weight:800;letter-spacing:-1px}
+.date{color:#8d96a8;font-size:13px;margin-top:7px}
+.avatar{background:#202b40;padding:12px;border-radius:14px}
+h2{font-size:23px;margin:25px 0 6px}
+.muted{color:#8993a6;font-size:13px}
+.card{background:#151b27;border:1px solid #242d3c;border-radius:18px;padding:17px;margin:16px 0}
+.progress{height:8px;background:#30394a;border-radius:10px;overflow:hidden;margin-top:15px}
+.bar{height:100%;width:0;background:#79d6a0;transition:.2s}
+.stats{display:flex;justify-content:space-between;align-items:center}
+.percent{font-size:25px;font-weight:bold;color:#79d6a0}
+.tabs{display:flex;gap:9px;margin:20px 0}
+.tab{background:#192131;border:0;color:#aab4c6;padding:11px 14px;border-radius:11px}
+.tab.active{background:#79d6a0;color:#101a16}
+.task{display:flex;align-items:center;gap:12px;padding:14px 2px;border-bottom:1px solid #293140}
+.task:last-child{border:0}
+.task input{width:19px;height:19px;accent-color:#79d6a0}
+.taskinfo{flex:1;min-width:0}
+.taskname{font-size:14px;font-weight:600}
+.taskname.done{text-decoration:line-through;color:#778195}
+.tasktime{font-size:11px;color:#8792a5;margin-top:5px}
+.priority{font-size:10px;padding:5px 8px;border-radius:7px;background:#283347;color:#a9c5ff}
+.delete{background:none;border:0;color:#8792a5;font-size:19px}
+button{cursor:pointer}
+.add{width:100%;background:#79d6a0;color:#102018;border:0;border-radius:13px;padding:15px;font-weight:bold;font-size:14px;margin-top:14px}
+input,select{font:inherit}
+.field{width:100%;padding:13px;background:#0e1420;border:1px solid #30394a;color:white;border-radius:10px;margin:7px 0 12px}
+label{font-size:12px;color:#aab4c6}
+.bottom{position:fixed;bottom:0;left:0;right:0;background:#111722;border-top:1px solid #293140;display:flex;justify-content:space-around;padding:15px}
+.bottom button{background:none;border:0;color:#9ba8bc;font-size:12px}
+.bottom button.active{color:#79d6a0}
+.empty{text-align:center;color:#8792a5;padding:25px 0}
+</style>
+</head>
+<body>
+<header>
+ <div>
+  <div class="logo">PLANNER.</div>
+  <div class="date" id="date"></div>
+ </div>
+ <div class="avatar">✦</div>
+</header>
+
+<h2 id="greeting">La tua giornata.</h2>
+<div class="muted">Organizza oggi, un passo alla volta.</div>
+
+<div class="card">
+ <div class="stats">
+  <div>
+   <b>Progresso giornaliero</b>
+   <div class="muted" id="count">0 attività completate</div>
+  </div>
+  <div class="percent" id="percent">0%</div>
+ </div>
+ <div class="progress"><div class="bar" id="bar"></div></div>
+</div>
+
+<div class="tabs">
+ <button class="tab active" onclick="showTab('today',this)">Oggi</button>
+ <button class="tab" onclick="showTab('week',this)">Settimana</button>
+</div>
+
+<h2 id="sectionTitle">Le tue attività</h2>
+<div class="muted">Tutto quello che hai pianificato.</div>
+
+<div class="card" id="taskList"></div>
+
+<button class="add" onclick="openForm()">+ Aggiungi attività</button>
+
+<div id="form" class="card" style="display:none">
+ <h3>Nuova attività</h3>
+ <label>Nome attività</label>
+ <input id="taskName" class="field" placeholder="Es. Studiare matematica">
+ <label>Orario</label>
+ <input id="taskTime" type="time" class="field">
+ <label>Priorità</label>
+ <select id="taskPriority" class="field">
+  <option value="Bassa">Bassa</option>
+  <option value="Media" selected>Media</option>
+  <option value="Alta">Alta</option>
+ </select>
+ <button class="add" onclick="addTask()">Salva attività</button>
+ <button class="add" style="background:#293447;color:white" onclick="closeForm()">Annulla</button>
+</div>
+
+<nav class="bottom">
+ <button class="active" onclick="showTab('today')">⌂<br>Home</button>
+ <button onclick="showTab('week')">▦<br>Settimana</button>
+ <button onclick="openForm()">＋<br>Crea</button>
+</nav>
+
+<script>
+let tasks=JSON.parse(localStorage.getItem('plannerTasks')||'[]');
+let currentTab='today';
+
+const days=['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
+const now=new Date();
+document.getElementById('date').textContent=
+days[now.getDay()]+' · '+now.toLocaleDateString('it-IT');
+
+document.getElementById('greeting').textContent=
+now.getHours()<12?'Buongiorno.':now.getHours()<18?'Buon pomeriggio.':'Buonasera.';
+
+function save(){
+ localStorage.setItem('plannerTasks',JSON.stringify(tasks));
+ render();
+}
+
+function render(){
+ const list=document.getElementById('taskList');
+ const completed=tasks.filter(t=>t.done).length;
+ const total=tasks.length;
+ const percent=total?Math.round(completed/total*100):0;
+
+ document.getElementById('percent').textContent=percent+'%';
+ document.getElementById('count').textContent=completed+' di '+total+' completate';
+ document.getElementById('bar').style.width=percent+'%';
+
+ let visible=tasks.filter(t=>currentTab==='week'?true:t.day===new Date().toLocaleDateString('it-IT'));
+
+ visible.sort((a,b)=>a.time.localeCompare(b.time));
+
+ if(!visible.length){
+  list.innerHTML='<div class="empty">Nessuna attività.<br>È il momento di pianificare!</div>';
+  return;
+ }
+
+ list.innerHTML='';
+ visible.forEach(t=>{
+  const index=tasks.indexOf(t);
+  const row=document.createElement('div');
+  row.className='task';
+
+  const check=document.createElement('input');
+  check.type='checkbox';
+  check.checked=t.done;
+  check.onchange=()=>{tasks[index].done=check.checked;save()};
+
+  const info=document.createElement('div');
+  info.className='taskinfo';
+
+  const name=document.createElement('div');
+  name.className='taskname'+(t.done?' done':'');
+  name.textContent=t.name;
+
+  const time=document.createElement('div');
+  time.className='tasktime';
+  time.textContent=t.time+' · '+t.day;
+
+  info.append(name,time);
+
+  const priority=document.createElement('span');
+  priority.className='priority';
+  priority.textContent=t.priority;
+
+  const del=document.createElement('button');
+  del.className='delete';
+  del.textContent='×';
+  del.onclick=()=>{tasks.splice(index,1);save()};
+
+  row.append(check,info,priority,del);
+  list.appendChild(row);
+ });
+}
+
+function openForm(){
+ document.getElementById('form').style.display='block';
+ document.getElementById('taskName').focus();
+}
+
+function closeForm(){
+ document.getElementById('form').style.display='none';
+}
+
+function addTask(){
+ const name=document.getElementById('taskName').value.trim();
+ const time=document.getElementById('taskTime').value;
+ const priority=document.getElementById('taskPriority').value;
+
+ if(!name){alert('Inserisci il nome dell’attività');return}
+
+ tasks.push({
+  name,
+  time:time||'23:59',
+  priority,
+  done:false,
+  day:new Date().toLocaleDateString('it-IT')
+ });
+
+ document.getElementById('taskName').value='';
+ document.getElementById('taskTime').value='';
+ closeForm();
+ save();
+}
+
+function showTab(tab,button){
+ currentTab=tab;
+ document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+ if(button && button.classList.contains('tab'))button.classList.add('active');
+ document.getElementById('sectionTitle').textContent=
+ tab==='week'?'Tutte le attività':'Le tue attività';
+ render();
+}
+
+render();
+</script>
+</body>
+</html>
