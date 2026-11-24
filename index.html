@@ -91,8 +91,18 @@ label{font-size:12px;color:var(--muted)}
 .settingrow{padding:15px 0;border-bottom:1px solid var(--line)}
 @media(min-width:650px){.page{max-width:650px;margin:auto}.track{align-items:stretch}}
 </style>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#090e18">
 </head>
-<body>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js");
+  });
+}
+</script>
+</head>
+ <body>
 
 <header>
  <div>
